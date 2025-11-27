@@ -8,7 +8,7 @@ app.use(express.json());
 
 // 🔥 Reemplaza con tu token de producción o prueba
 const client = new MercadoPagoConfig({
-    accessToken: "APP_USR-TU-TOKEN-AQUI"
+    accessToken: "APP_USR-2161278205149294-112701-8343c4fa1850cefb1cebbe3a5640a026-3019382479"
 });
 
 // 🔥 URL DE TU FRONTEND EN VERCEL
