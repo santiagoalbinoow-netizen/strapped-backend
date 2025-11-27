@@ -8,7 +8,7 @@ app.use(express.json());
 
 // 🔥 Reemplaza con tu token de producción o prueba
 const client = new MercadoPagoConfig({
-    accessToken: "APP_USR-2161278205149294-112701-8343c4fa1850cefb1cebbe3a5640a026-3019382479"
+    accessToken: "APP_USR-8413474814898505-112717-4fc7bcd9ee50bb9fdfaace0c6fe2dcb9-3019382479"
 });
 
 // 🔥 URL DE TU FRONTEND EN VERCEL
@@ -76,3 +76,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend MercadoPago activo en puerto ${PORT}`);
 });
+
