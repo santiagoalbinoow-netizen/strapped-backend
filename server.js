@@ -12,12 +12,13 @@ app.use(express.json());
 ============================= */
 
 const db = mysql.createConnection({
-    host: "caboose.proxy.rlwy.net",
-    user: "root",
-    password: "sLqMmfVDZzUxuKIosTYTqUozWTMnylCN",
-    database: "railway",
-    port: 16379
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    database: process.env.MYSQLDATABASE,
+    port: process.env.MYSQLPORT
 });
+
 
 
 db.connect(err => {
@@ -202,4 +203,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
