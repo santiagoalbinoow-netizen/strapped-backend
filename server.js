@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 
 const app = express();
@@ -64,45 +65,34 @@ app.post("/register", async (req, res) => { // <- Ahora debe ser 'async'
 });
 
 /* ============================
-    🔹 ENDPOINT - LOGIN SEGURO
+    🔹 ENDPOINT - LOGIN SEGURO (CON JWT)
 ============================= */
-
 app.post("/login", (req, res) => {
-    const { email, password } = req.body;
+    // ... (Tu código de búsqueda y comparación con bcrypt aquí) ...
 
-    // 1. Buscar al usuario por email
     db.query(
         "SELECT id, nombre, email, password AS hashedPassword, rol FROM users WHERE email = ?",
         [email],
-        async (err, results) => { // <- Debe ser 'async' para usar await de bcrypt
-            if (err) return res.status(500).json({ error: "Error interno" });
-
-            if (results.length === 0) {
-                return res.status(401).json({ error: "Credenciales incorrectas" });
-            }
-
+        async (err, results) => {
+            // ... (Manejo de errores y verificación de contraseña aquí) ...
+            
+            // Si el match es exitoso:
             const user = results[0];
+            
+            // 1. Crear el token de acceso
+            const token = jwt.sign(
+                { id: user.id, rol: user.rol }, 
+                process.env.JWT_SECRET, // Usa la clave secreta de Railway
+                { expiresIn: '1d' }      // El token expira en 1 día
+            );
 
-            try {
-                // 2. Comparar la contraseña enviada con el hash guardado
-                const match = await bcrypt.compare(password, user.hashedPassword);
-
-                if (!match) {
-                    return res.status(401).json({ error: "Credenciales incorrectas" });
-                }
-
-                // 3. Login exitoso (omitir el hash en la respuesta)
-                res.json({
-                    id: user.id,
-                    nombre: user.nombre,
-                    email: user.email,
-                    rol: user.rol || 'cliente' // Asumir rol 'cliente' si no existe
-                });
-
-            } catch (compareError) {
-                console.error("Error al comparar contraseñas:", compareError);
-                return res.status(500).json({ error: "Error en la verificación." });
-            }
+            // 2. Responder con el token (el Frontend lo guardará)
+            res.json({
+                token: token, // <--- Enviamos el token al cliente
+                id: user.id,
+                nombre: user.nombre,
+                rol: user.rol || 'cliente' 
+            });
         }
     );
 });
@@ -142,6 +132,38 @@ app.post("/admin/products", (req, res) => {
         }
     );
 });
+
+/* ============================
+    🔹 MIDDLEWARE DE SEGURIDAD
+============================= */
+
+// 1. Verifica que el token sea válido
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    // El token viene en formato "Bearer [token]"
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) {
+        return res.status(401).json({ error: 'Acceso denegado. Token requerido.' });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) {
+            // Token inválido o expirado
+            return res.status(403).json({ error: 'Token inválido o expirado.' });
+        }
+        req.user = user; // Adjuntamos la info del usuario (id y rol) a la solicitud
+        next();
+    });
+};
+
+// 2. Verifica que el rol sea 'admin'
+const requireAdmin = (req, res, next) => {
+    if (req.user.rol !== 'admin') {
+        return res.status(403).json({ error: 'Acceso denegado. Rol de administrador requerido.' });
+    }
+    next();
+};
 
 /* ============================
     🔹 AÑADIR AL CARRITO
@@ -269,6 +291,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
