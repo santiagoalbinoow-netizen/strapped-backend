@@ -109,28 +109,29 @@ app.get("/products", (req, res) => {
 });
 
 /* ============================
-    🔹 ENDPOINT - AGREGAR PRODUCTO (ADMIN)
+    🔹 ENDPOINT - AGREGAR PRODUCTO (ADMIN PROTEGIDO)
 ============================= */
+// MODIFICADO: AÑADIMOS authenticateToken y requireAdmin
+app.post("/admin/products", authenticateToken, requireAdmin, (req, res) => {
+    // Ahora este código solo se ejecuta si el usuario tiene un token válido
+    // Y su rol en el token es 'admin'
+    const { nombre, descripcion, precio, stock, imagen } = req.body;
 
-app.post("/admin/products", (req, res) => {
-    // ⚠️ Idealmente, aquí se debe verificar el rol del usuario (JWT o Sesión)
-    const { nombre, descripcion, precio, stock, imagen } = req.body;
-
-    db.query(
-        "INSERT INTO products (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)",
-        [nombre, descripcion, precio, stock, imagen],
-        (err, result) => {
-            if (err) {
-                console.error("Error al insertar producto:", err);
-                return res.status(500).json({ error: "Error interno al guardar producto." });
-            }
-            res.status(201).json({ 
-                success: true, 
-                message: "Producto agregado",
-                id: result.insertId 
-            });
-        }
-    );
+    db.query(
+        "INSERT INTO products (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)",
+        [nombre, descripcion, precio, stock, imagen],
+        (err, result) => {
+            if (err) {
+                console.error("Error al insertar producto:", err);
+                return res.status(500).json({ error: "Error interno al guardar producto." });
+            }
+            res.status(201).json({ 
+                success: true, 
+                message: "Producto agregado",
+                id: result.insertId 
+            });
+        }
+    );
 });
 
 /* ============================
@@ -291,6 +292,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
