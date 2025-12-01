@@ -6,7 +6,19 @@ import jwt from "jsonwebtoken";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 
 const app = express();
-app.use(cors());
+
+// 1. Define el origen permitido (tu frontend de Vercel)
+const allowedOrigins = ['https://strapped-six.vercel.app'];
+
+// 2. Configuración de CORS con el origen permitido y credenciales
+app.use(cors({
+    origin: allowedOrigins,
+    // Permite los métodos que utilizas (GET, POST, PUT, DELETE)
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    // Es importante para manejar tokens y cookies
+    credentials: true 
+})); 
+
 app.use(express.json());
 
 /* ============================
@@ -372,6 +384,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
