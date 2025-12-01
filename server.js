@@ -119,14 +119,28 @@ app.get("/products", (req, res) => {
 });
 
 /* ============================
-    🔹 PRODUCTO POR ID
+    🔹 ENDPOINT - AGREGAR PRODUCTO (ADMIN)
 ============================= */
 
-app.get("/product/:id", (req, res) => {
-    db.query("SELECT * FROM products WHERE id = ?", [req.params.id], (err, results) => {
-        if (err) return res.status(500).json({ error: "Error interno" });
-        res.json(results[0]);
-    });
+app.post("/admin/products", (req, res) => {
+    // ⚠️ Idealmente, aquí se debe verificar el rol del usuario (JWT o Sesión)
+    const { nombre, descripcion, precio, stock, imagen } = req.body;
+
+    db.query(
+        "INSERT INTO products (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)",
+        [nombre, descripcion, precio, stock, imagen],
+        (err, result) => {
+            if (err) {
+                console.error("Error al insertar producto:", err);
+                return res.status(500).json({ error: "Error interno al guardar producto." });
+            }
+            res.status(201).json({ 
+                success: true, 
+                message: "Producto agregado",
+                id: result.insertId 
+            });
+        }
+    );
 });
 
 /* ============================
@@ -164,6 +178,25 @@ app.get("/cart/:user_id", (req, res) => {
             res.json(results);
         }
     );
+});
+
+app.delete("/admin/products/:id", (req, res) => {
+    // ⚠️ Idealmente, aquí se debe verificar el rol del usuario (JWT o Sesión)
+    const productId = req.params.id;
+
+    db.query("DELETE FROM products WHERE id = ?", [productId], (err, result) => {
+        if (err) {
+            console.error("Error al eliminar producto:", err);
+            return res.status(500).json({ error: "Error interno al eliminar producto." });
+        }
+        
+        // Verifica si se eliminó alguna fila
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Producto no encontrado." });
+        }
+        
+        res.json({ success: true, message: `Producto con ID ${productId} eliminado.` });
+    });
 });
 
 /* ============================
@@ -236,6 +269,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
