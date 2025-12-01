@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
+import bcrypt from "bcrypt";
 import { MercadoPagoConfig, Preference } from "mercadopago";
 
 const app = express();
@@ -33,19 +34,33 @@ db.connect(err => {
     🔹 ENDPOINT - REGISTRO
 ============================= */
 
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => { // <- Ahora debe ser 'async'
     const { nombre, email, password } = req.body;
 
-    db.query(
-        "INSERT INTO users (nombre, email, password) VALUES (?, ?, ?)",
-        [nombre, email, password],
-        err => {
-            if (err) {
-                return res.status(500).json({ error: "Error creando usuario" });
+    try {
+        // 1. Hashear la contraseña (10 es la dificultad, o 'salt rounds')
+        const hashedPassword = await bcrypt.hash(password, 10); 
+
+        // 2. Insertar el hash, NO la contraseña original
+        db.query(
+            "INSERT INTO users (nombre, email, password) VALUES (?, ?, ?)",
+            [nombre, email, hashedPassword], // <-- USAR hashedPassword
+            (err) => {
+                if (err) {
+                    // Si el email ya existe (UNIQUE constraint), se detecta el error
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({ error: "El email ya está registrado." });
+                    }
+                    console.error(err);
+                    return res.status(500).json({ error: "Error creando usuario" });
+                }
+                res.json({ success: true, message: "Usuario registrado." });
             }
-            res.json({ success: true });
-        }
-    );
+        );
+    } catch (hashError) {
+        console.error("Error al hashear contraseña:", hashError);
+        res.status(500).json({ error: "Error interno de servidor." });
+    }
 });
 
 /* ============================
@@ -203,5 +218,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
