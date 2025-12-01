@@ -64,27 +64,45 @@ app.post("/register", async (req, res) => { // <- Ahora debe ser 'async'
 });
 
 /* ============================
-    🔹 ENDPOINT - LOGIN
+    🔹 ENDPOINT - LOGIN SEGURO
 ============================= */
 
 app.post("/login", (req, res) => {
     const { email, password } = req.body;
 
+    // 1. Buscar al usuario por email
     db.query(
-        "SELECT * FROM users WHERE email = ? AND password = ?",
-        [email, password],
-        (err, results) => {
+        "SELECT id, nombre, email, password AS hashedPassword, rol FROM users WHERE email = ?",
+        [email],
+        async (err, results) => { // <- Debe ser 'async' para usar await de bcrypt
             if (err) return res.status(500).json({ error: "Error interno" });
 
             if (results.length === 0) {
                 return res.status(401).json({ error: "Credenciales incorrectas" });
             }
 
-            res.json({
-                id: results[0].id,
-                nombre: results[0].nombre,
-                email: results[0].email
-            });
+            const user = results[0];
+
+            try {
+                // 2. Comparar la contraseña enviada con el hash guardado
+                const match = await bcrypt.compare(password, user.hashedPassword);
+
+                if (!match) {
+                    return res.status(401).json({ error: "Credenciales incorrectas" });
+                }
+
+                // 3. Login exitoso (omitir el hash en la respuesta)
+                res.json({
+                    id: user.id,
+                    nombre: user.nombre,
+                    email: user.email,
+                    rol: user.rol || 'cliente' // Asumir rol 'cliente' si no existe
+                });
+
+            } catch (compareError) {
+                console.error("Error al comparar contraseñas:", compareError);
+                return res.status(500).json({ error: "Error en la verificación." });
+            }
         }
     );
 });
@@ -218,6 +236,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
