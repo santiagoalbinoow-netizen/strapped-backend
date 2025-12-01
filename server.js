@@ -32,36 +32,35 @@ db.connect(err => {
 });
 
 /* ============================
-    🔹 ENDPOINT - REGISTRO
+    🔹 ENDPOINT - MODIFICAR PRODUCTO (ADMIN PROTEGIDO)
 ============================= */
+app.put("/admin/products/:id", authenticateToken, requireAdmin, (req, res) => {
+    const productId = req.params.id;
+    const { nombre, descripcion, precio, stock, imagen } = req.body;
 
-app.post("/register", async (req, res) => { // <- Ahora debe ser 'async'
-    const { nombre, email, password } = req.body;
+    // La consulta UPDATE permite cambiar múltiples campos a la vez
+    const updateQuery = `
+        UPDATE products
+        SET nombre = ?, descripcion = ?, precio = ?, stock = ?, imagen = ?
+        WHERE id = ?
+    `;
 
-    try {
-        // 1. Hashear la contraseña (10 es la dificultad, o 'salt rounds')
-        const hashedPassword = await bcrypt.hash(password, 10); 
+    db.query(
+        updateQuery,
+        [nombre, descripcion, precio, stock, imagen, productId],
+        (err, result) => {
+            if (err) {
+                console.error("Error al actualizar producto:", err);
+                return res.status(500).json({ error: "Error interno al actualizar producto." });
+            }
 
-        // 2. Insertar el hash, NO la contraseña original
-        db.query(
-            "INSERT INTO users (nombre, email, password) VALUES (?, ?, ?)",
-            [nombre, email, hashedPassword], // <-- USAR hashedPassword
-            (err) => {
-                if (err) {
-                    // Si el email ya existe (UNIQUE constraint), se detecta el error
-                    if (err.code === 'ER_DUP_ENTRY') {
-                        return res.status(409).json({ error: "El email ya está registrado." });
-                    }
-                    console.error(err);
-                    return res.status(500).json({ error: "Error creando usuario" });
-                }
-                res.json({ success: true, message: "Usuario registrado." });
-            }
-        );
-    } catch (hashError) {
-        console.error("Error al hashear contraseña:", hashError);
-        res.status(500).json({ error: "Error interno de servidor." });
-    }
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: "Producto no encontrado." });
+            }
+
+            res.json({ success: true, message: `Producto con ID ${productId} actualizado.` });
+        }
+    );
 });
 
 /* ============================
@@ -132,6 +131,21 @@ app.post("/admin/products", authenticateToken, requireAdmin, (req, res) => {
             });
         }
     );
+});
+
+/* ============================
+    🔹 ENDPOINT - PRODUCTO POR ID (ADMIN PROTEGIDO)
+============================= */
+app.get("/admin/product/:id", authenticateToken, requireAdmin, (req, res) => {
+    db.query("SELECT * FROM products WHERE id = ?", [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ error: "Error interno" });
+        
+        if (results.length === 0) {
+            return res.status(404).json({ error: "Producto no encontrado." });
+        }
+
+        res.json(results[0]);
+    });
 });
 
 /* ============================
@@ -292,6 +306,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
