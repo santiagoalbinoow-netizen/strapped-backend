@@ -30,7 +30,18 @@ db.connect(err => {
         console.log("🔥 Conectado a MySQL (strapped)");
     }
 });
+/* ============================
+    🔹 MIDDLEWARE DE SEGURIDAD
+============================= */
+// 1. Verifica que el token sea válido
+const authenticateToken = (req, res, next) => {
+// ... (código de autenticación) ...
+};
 
+// 2. Verifica que el rol sea 'admin'
+const requireAdmin = (req, res, next) => {
+// ... (código de requireAdmin) ...
+};
 /* ============================
     🔹 ENDPOINT - MODIFICAR PRODUCTO (ADMIN PROTEGIDO)
 ============================= */
@@ -306,6 +317,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
