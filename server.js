@@ -75,25 +75,80 @@ app.put("/admin/products/:id", authenticateToken, requireAdmin, (req, res) => {
 });
 
 /* ============================
+    🔹 ENDPOINT - REGISTRO DE USUARIO
+============================= */
+app.post("/register", async (req, res) => {
+    const { nombre, email, password } = req.body;
+    const saltRounds = 10;
+
+    if (!nombre || !email || !password) {
+        return res.status(400).json({ error: "Faltan datos requeridos." });
+    }
+
+    try {
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        db.query(
+            "INSERT INTO users (nombre, email, password, rol) VALUES (?, ?, ?, 'cliente')",
+            [nombre, email, hashedPassword],
+            (err, result) => {
+                if (err) {
+                    // 1062 es el código de error de MySQL para 'Duplicate entry' (email ya existe)
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({ error: "El correo ya está registrado." });
+                    }
+                    console.error("Error al registrar:", err);
+                    return res.status(500).json({ error: "Error interno al registrar." });
+                }
+                // Éxito: el frontend ahora llamará a /login automáticamente
+                res.status(201).json({ success: true, message: "Usuario registrado." });
+            }
+        );
+    } catch (error) {
+        console.error("Error en hashing:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
+/* ============================
     🔹 ENDPOINT - LOGIN SEGURO (CON JWT)
 ============================= */
 app.post("/login", (req, res) => {
-    // ... (Tu código de búsqueda y comparación con bcrypt aquí) ...
+    const { email, password } = req.body; // ⬅️ Paso 1: Obtener email y password del cuerpo
+
+    // Simple validación de entrada
+    if (!email || !password) {
+        return res.status(400).json({ error: "Faltan email o contraseña." });
+    }
 
     db.query(
         "SELECT id, nombre, email, password AS hashedPassword, rol FROM users WHERE email = ?",
         [email],
         async (err, results) => {
-            // ... (Manejo de errores y verificación de contraseña aquí) ...
-            
-            // Si el match es exitoso:
+            if (err) {
+                console.error("Error en consulta de login:", err);
+                return res.status(500).json({ error: "Error interno al iniciar sesión." });
+            }
+
+            if (results.length === 0) {
+                // Si no encuentra al usuario, respondemos con error genérico por seguridad
+                return res.status(401).json({ error: "Correo o contraseña incorrectos." });
+            }
+
             const user = results[0];
-            
+            const match = await bcrypt.compare(password, user.hashedPassword); // ⬅️ Paso 2: Comparar hash
+
+            if (!match) {
+                // Si la contraseña no coincide
+                return res.status(401).json({ error: "Correo o contraseña incorrectos." });
+            }
+
+            // Si el match es exitoso:
             // 1. Crear el token de acceso
             const token = jwt.sign(
                 { id: user.id, rol: user.rol }, 
                 process.env.JWT_SECRET, // Usa la clave secreta de Railway
-                { expiresIn: '1d' }      // El token expira en 1 día
+                { expiresIn: '1d' }     // El token expira en 1 día
             );
 
             // 2. Responder con el token (el Frontend lo guardará)
@@ -317,6 +372,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
