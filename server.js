@@ -203,23 +203,23 @@ app.get("/cart/:user_id", (req, res) => {
     );
 });
 
-app.delete("/admin/products/:id", (req, res) => {
-    // ⚠️ Idealmente, aquí se debe verificar el rol del usuario (JWT o Sesión)
-    const productId = req.params.id;
+app.delete("/admin/products/:id", authenticateToken, requireAdmin, (req, res) => { // MODIFICADO
+    // Ahora este código solo se ejecuta si el usuario es un admin válido
+    const productId = req.params.id;
 
-    db.query("DELETE FROM products WHERE id = ?", [productId], (err, result) => {
-        if (err) {
-            console.error("Error al eliminar producto:", err);
-            return res.status(500).json({ error: "Error interno al eliminar producto." });
-        }
-        
-        // Verifica si se eliminó alguna fila
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: "Producto no encontrado." });
-        }
-        
-        res.json({ success: true, message: `Producto con ID ${productId} eliminado.` });
-    });
+    db.query("DELETE FROM products WHERE id = ?", [productId], (err, result) => {
+        if (err) {
+            console.error("Error al eliminar producto:", err);
+            return res.status(500).json({ error: "Error interno al eliminar producto." });
+        }
+        
+        // Verifica si se eliminó alguna fila
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Producto no encontrado." });
+        }
+        
+        res.json({ success: true, message: `Producto con ID ${productId} eliminado.` });
+    });
 });
 
 /* ============================
@@ -292,6 +292,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🔥 Backend activo en puerto ${PORT}`);
 });
+
 
 
 
